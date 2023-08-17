@@ -72,8 +72,12 @@ def write_tar_file(data_list,
                     read_time += (time.time() - ts)
                     prev_wav = wav
                 start = int(start * sample_rate)
-                end = int(end * sample_rate)
-                audio = waveforms[:1, start:end]
+                if end == -1:
+                    end = len(waveforms)
+                else:
+                    end = int(end * sample_rate)
+                audio = waveforms[:1, start:end]            # 从这里切分对话句子的音频
+                assert len(audio) > 0
 
                 # resample
                 if sample_rate != resample:
@@ -143,7 +147,7 @@ if __name__ == '__main__':
                         format='%(asctime)s %(levelname)s %(message)s')
 
     torch.set_num_threads(1)
-    wav_table = {}
+    wav_table = {}          # aid: path
     with open(args.wav_file, 'r', encoding='utf8') as fin:
         for line in fin:
             arr = line.strip().split()
@@ -151,7 +155,7 @@ if __name__ == '__main__':
             wav_table[arr[0]] = arr[1]
 
     no_segments = True
-    segments_table = {}
+    segments_table = {}       # sid: (aid, begin_time, end_time)
     if args.segments is not None:
         no_segments = False
         with open(args.segments, 'r', encoding='utf8') as fin:
@@ -161,22 +165,22 @@ if __name__ == '__main__':
                 segments_table[arr[0]] = (arr[1], float(arr[2]), float(arr[3]))
 
     data = []
-    with open(args.text_file, 'r', encoding='utf8') as fin:
+    with open(args.text_file, 'r', encoding='utf8') as fin:         # sid text  
         for line in fin:
             arr = line.strip().split(maxsplit=1)
-            key = arr[0]
-            txt = arr[1] if len(arr) > 1 else ''
+            key = arr[0]                                    # sid
+            txt = arr[1] if len(arr) > 1 else ''            # text
             if no_segments:
                 assert key in wav_table
                 wav = wav_table[key]
                 data.append((key, txt, wav))
             else:
-                wav_key, start, end = segments_table[key]
-                wav = wav_table[wav_key]
-                data.append((key, txt, wav, start, end))
+                wav_key, start, end = segments_table[key]           # aid, begin_time, end_time
+                wav = wav_table[wav_key]                            # path
+                data.append((key, txt, wav, start, end))            # sid, text, path, begin_time, end_time
 
-    num = args.num_utts_per_shard
-    chunks = [data[i:i + num] for i in range(0, len(data), num)]
+    num = args.num_utts_per_shard                                   # 1000
+    chunks = [data[i:i + num] for i in range(0, len(data), num)]    # 每1000句话（不是语音）分成一个chunk，[[data0,……,data999], [data1000,……,data1999], ……] # 每1000句话（不是语音）分成一个chunk，[[data0,……,data999], [data1000,……,data1999], ……]
     os.makedirs(args.shards_dir, exist_ok=True)
 
     # Using thread pool to speedup

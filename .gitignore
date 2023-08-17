@@ -46,3 +46,15 @@ runtime/core/grpc/wenet.pb.h
 # Clangd files
 .cache
 compile_commands.json
+
+
+# 
+*.wav
+*.pcm
+test_pcm
+test_wav
+*/pretrained_models/*
+runtime/libtorch/pretrained_models
+*metadate
+examples/aishell/s0/metadata
+dialect_shards
