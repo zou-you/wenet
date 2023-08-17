@@ -21,7 +21,7 @@ dialect=粤语
 echo "当前方言：$dialect"
 
 # 数据地址
-dialect_data_dir=/home/zouyou/workspaces/ASR/wenet/examples/dialects/s0/metadate/$dialect
+dialect_data_dir=/home/zouyou/workspaces/ASR/wenet/examples/dialects/s0/metadata/$dialect
 
 # 处理成shards格式的存储位置
 shards_dir=./dialect_shards/$dialect

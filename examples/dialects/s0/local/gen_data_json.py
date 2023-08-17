@@ -12,10 +12,16 @@ random.seed(7)
 
 DATA_TYPE = ["对话", "朗读"]
 
-
-NOISE_PATTERN = re.compile(r'\[(SYSTEM|LAUGHTER|SONANT|ENS|MUSIC|\+|\*)\]')
+# 用于匹配噪音数据
+NOISE_PATTERN = re.compile(r'\[(SYSTEM|LAUGHTER|SONANT|ENS|MUSIC|ILG|NPS|\+|\*)\]|[\+]')
+# 匹配对话中开始和结束时间
 TIME_PATTERN = re.compile(r'\[([\d.]+),([\d.]+)\]')
-SYMBOL_PATTERN = re.compile(r'[.,!?;:！。，？]')
+# 匹配标点符号或空格
+SYMBOL_PATTERN = re.compile(r'[.,!?;:！。，？=/·、á\s]')
+# 匹配标注中需要去除的内容
+TAG_PATTERN = re.compile(r'\[(CHS|PII)\]')
+# 匹配指定文本内容
+TEXT_PATTERN = re.compile(r'^[嗯对哦呃诶唉哎啊咦]$')
 
 
 def get_args():
@@ -74,6 +80,16 @@ def deal_with_dialogue(root_path, audios, aid_set, audios_lst, subset, keep_symb
                 # 去除符号
                 if not keep_symbol:
                     text = SYMBOL_PATTERN.sub("", text)
+
+                # 去除指定标注
+                text = TAG_PATTERN.sub("", text)
+
+                # 去除指定文本
+                text = TEXT_PATTERN.sub("", text)
+                
+                # 判断处理后的文本是否为空
+                if not text:
+                    continue
 
                 segment = {
                     "sid": f"{audio_id}--{str(row).zfill(5)}",
@@ -156,6 +172,16 @@ def deal_with_read_text(text_path, keep_symbol=False):
             # 去除符号
             if not keep_symbol:
                 text = SYMBOL_PATTERN.sub("", text)
+
+            # 去除指定标注
+            text = TAG_PATTERN.sub("", text)
+
+            # 去除指定文本
+            text = TEXT_PATTERN.sub("", text)
+            
+            # 判断处理后的文本是否为空
+            if not text:
+                continue
 
             # sentence_id: text
             text_dct[sentence_id] = text
