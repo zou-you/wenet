@@ -55,6 +55,5 @@ test_pcm
 test_wav
 */pretrained_models/*
 runtime/libtorch/pretrained_models
-*metadate
-examples/aishell/s0/metadata
+metadata
 dialect_shards
