@@ -7,7 +7,7 @@
 
 # Use this to control how many gpu you use, It's 1-gpu training if you specify
 # just 1gpu, otherwise it's is multiple gpu training based on DDP in pytorch
-export CUDA_VISIBLE_DEVICES="4,5"
+export CUDA_VISIBLE_DEVICES="3,4,5"
 stage=0
 stop_stage=5
 
@@ -36,13 +36,15 @@ train_config=conf/train_conformer.yaml
 checkpoint=
 cmvn=true
 cmvn_sampling_divisor=20 # 20 means 5% of the training data to estimate cmvn
-dir=exp/conformer
+dir=exp/$dialect
+echo "checkpoint: $checkpoint"
 
 # 解码设置
 decode_checkpoint=
 average_checkpoint=true
 average_num=30
-decode_modes="ctc_greedy_search ctc_prefix_beam_search attention attention_rescoring"
+# decode_modes="ctc_greedy_search ctc_prefix_beam_search attention attention_rescoring"
+decode_modes=ctc_prefix_beam_search
 
 . tools/parse_options.sh || exit 1;
 
@@ -94,12 +96,14 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
   fi
 fi
 
+
+
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
   echo "Making shards, please wait..."
   RED='\033[0;31m'
   NOCOLOR='\033[0m'
 
-  for x in $dev_set $test_sets ${train_set}; do
+  for x in $dev_set ${train_set}; do
   # for x in ${train_set}; do
     dst=$shards_dir/$x
     mkdir -p $dst
@@ -107,6 +111,10 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
       --num_threads 32 --segments data/$dialect/$x/segments \
       data/$dialect/$x/wav.scp data/$dialect/$x/text \
       $(realpath $dst) data/$dialect/$x/data.list
+
+  tools/make_raw_list.py --segments data/$dialect/$test_sets/segments data/$dialect/$test_sets/wav.scp \
+    data/$dialect/$test_sets/text data/$dialect/$test_sets/data.list
+
   done
 fi
 
@@ -204,6 +212,6 @@ if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
   echo "Export the best model you want"
   python wenet/bin/export_jit.py \
     --config $dir/train.yaml \
-    --checkpoint $dir/avg_${average_num}.pt \
+    --checkpoint $dir/avg${average_num}.pt \
     --output_file $dir/final.zip
 fi

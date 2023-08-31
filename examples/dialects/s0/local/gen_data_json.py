@@ -21,13 +21,15 @@ SYMBOL_PATTERN = re.compile(r'[.,!?;:！。，？=/·、á\s]')
 # 匹配标注中需要去除的内容
 TAG_PATTERN = re.compile(r'\[(CHS|PII)\]')
 # 匹配指定文本内容
-TEXT_PATTERN = re.compile(r'^[嗯对哦呃诶唉哎啊咦]$')
+# TEXT_PATTERN = re.compile(r'^[嗯对哦呃诶唉哎啊咦]$')
+TEXT_PATTERN = re.compile(r'^[^\s]{1}$')
+
 
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data_dir', type=str, default="/home/zouyou/workspaces/ASR/wenet/examples/dialects/s0/metadate/粤语", help="""Input data file of dialects""")
-    parser.add_argument('--output_dir', type=str, default="/home/zouyou/workspaces/ASR/wenet/examples/dialects/s0/metadate/粤语", help="""Output dir for json file""")
+    parser.add_argument('--data_dir', type=str, default="/home/zouyou/workspaces/ASR/wenet/examples/dialects/s0/metadata/粤语", help="""Input data file of dialects""")
+    parser.add_argument('--output_dir', type=str, default="/home/zouyou/workspaces/ASR/wenet/examples/dialects/s0/metadata/粤语", help="""Output dir for json file""")
     parser.add_argument('--dialect', type=str, default="粤语", help="""Input type of dialect""")
 
     args = parser.parse_args()
@@ -124,17 +126,17 @@ def deal_with_read(root_path, audios, texts, aid_set, audios_lst, subset):
         aid_set[audio_id] = str(audio_path)
     
         # 判断音频对应文本是否存在
-        text = texts.get(audio_id)
-        if not text:
+        target_data = texts.get(audio_id)
+        if not target_data:
             print(f"未找到{str(audio_path)}对应的文本")
             continue
         
         # 
         segment = {
             "sid": f"{audio_id}--00000",
-            "begin_time": 0,
-            "end_time": -1,
-            "text": text,
+            "begin_time": target_data['begin_time'],
+            "end_time": target_data['end_time'],
+            "text": target_data['text'],
             "subset": [subset]
         }
 
@@ -158,15 +160,24 @@ def deal_with_read_text(text_path, keep_symbol=False):
             datas = line.strip().split('\t')
             
             # 判断数据是否正确
-            if len(datas) != 5:
+            if len(datas) != 6:
                 print(f"当前文本文件的第{row + 1}行有问题：{str(text_path)}")
                 continue
-            _, sentence_id, speak_id, _, text = datas
+            be_time, _, sentence_id, speak_id, _, text = datas
             sentence_id = sentence_id.split('.')[0]
 
             # 去除噪声数据
             if NOISE_PATTERN.search(text):
                 print(f"{str(text_path)}朗读文本的第{row + 1}行有噪声数据：")
+                continue
+
+            # 分割时间
+            match = TIME_PATTERN.match(be_time)
+            if match:
+                begin_time = float(match.group(1))
+                end_time = float(match.group(2))
+            else:
+                print(f"{str(text_path)}的第{row + 1}行未标注音频时段")
                 continue
 
             # 去除符号
@@ -181,10 +192,13 @@ def deal_with_read_text(text_path, keep_symbol=False):
             
             # 判断处理后的文本是否为空
             if not text:
+                print(f"朗读文本{text_path}的第{row+1}行：{line}")
                 continue
 
             # sentence_id: text
-            text_dct[sentence_id] = text
+            text_dct[sentence_id] = {"text": text,
+                                     "begin_time": begin_time,
+                                     "end_time": end_time}
 
     return text_dct
 
@@ -217,7 +231,7 @@ def deal_with_all(data_path, output_path, dialect, ratio=0.8):
             train_dev_texts = {}
             for dir in path.iterdir():
                 # 待处理的文本路径
-                text_path = dir / "UTTRANSINFO.txt"
+                text_path = dir / "UTTRANSINFO_WITH_DURATION.txt"
                 if not text_path.exists():
                     print(f"未找到当前音频对应的文本文件：{str(dir)}")
                     continue
@@ -230,7 +244,7 @@ def deal_with_all(data_path, output_path, dialect, ratio=0.8):
                     temp_text = deal_with_read_text(text_path)
                     train_dev_texts.update(temp_text)
 
-            assert len(train_dev_audios) == len(train_dev_texts), f"文本数：{len(train_dev_texts)}, 音频数：{len(train_dev_audios)}"
+            # assert len(train_dev_audios) == len(train_dev_texts), f"文本数：{len(train_dev_texts)}, 音频数：{len(train_dev_audios)}"
 
             # 划分数据集（train, dev）
             total = len(train_dev_audios)
