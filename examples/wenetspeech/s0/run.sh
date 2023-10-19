@@ -17,9 +17,9 @@ num_nodes=1
 node_rank=0
 
 # Use your own data path. You need to download the WenetSpeech dataset by yourself.
-wenetspeech_data_dir=/ssd/nfs07/binbinzhang/wenetspeech
+wenetspeech_data_dir=/home/zouyou/workspaces/ASR/newKaldi/icefall/egs/wenetspeech/ASR/download/WenetSpeech
 # Make sure you have 1.2T for ${shards_dir}
-shards_dir=/ssd/nfs06/unified_data/wenetspeech_shards
+shards_dir=./dialect_shards/
 
 # WenetSpeech training set
 set=L

@@ -13,24 +13,27 @@ random.seed(7)
 DATA_TYPE = ["对话", "朗读"]
 
 # 用于匹配噪音数据
-NOISE_PATTERN = re.compile(r'\[(SYSTEM|LAUGHTER|SONANT|ENS|MUSIC|ILG|NPS|\+|\*)\]|[\+]')
+NOISE_PATTERN = re.compile(r'\[(SYSTEM|LAUGHTER|SONANT|ENS|MUSIC|ILG|NPS|TTSF|TTSM|\+|\*)\]|[\+]')
 # 匹配对话中开始和结束时间
 TIME_PATTERN = re.compile(r'\[([\d.]+),([\d.]+)\]')
 # 匹配标点符号或空格
-SYMBOL_PATTERN = re.compile(r'[.,!?;:！。，？=/·、á\s]')
+SYMBOL_PATTERN = re.compile(r'[.,!?;:！。，“”？~=/·、á\s|\-`\'\\&：＜＞－—．〔〕〈〉…～；]')
 # 匹配标注中需要去除的内容
 TAG_PATTERN = re.compile(r'\[(CHS|PII)\]')
 # 匹配指定文本内容
 # TEXT_PATTERN = re.compile(r'^[嗯对哦呃诶唉哎啊咦]$')
 TEXT_PATTERN = re.compile(r'^[^\s]{1}$')
+# 匹配指定注释内容，如 “啷个”【怎么】和 “啷个【怎么】”
+COMMENTED_PATTERN1 = re.compile(r'“[^”]+”\【([^【】]+)】')
+COMMENTED_PATTERN2 = re.compile(r'“[^”]+\【([^【】]+)】”')
 
 
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data_dir', type=str, default="/home/zouyou/workspaces/ASR/wenet/examples/dialects/s0/metadata/粤语", help="""Input data file of dialects""")
-    parser.add_argument('--output_dir', type=str, default="/home/zouyou/workspaces/ASR/wenet/examples/dialects/s0/metadata/粤语", help="""Output dir for json file""")
-    parser.add_argument('--dialect', type=str, default="粤语", help="""Input type of dialect""")
+    parser.add_argument('--data_dir', type=str, default="/mnt/inspurfs/user-fs/multimedia/ASR/wenet/dialects/s0/metadata/四川话", help="""Input data file of dialects""")
+    parser.add_argument('--output_dir', type=str, default="/mnt/inspurfs/user-fs/multimedia/ASR/wenet/dialects/s0/metadata/四川话", help="""Output dir for json file""")
+    parser.add_argument('--dialect', type=str, default="四川话", help="""Input type of dialect""")
 
     args = parser.parse_args()
     return args
@@ -78,6 +81,10 @@ def deal_with_dialogue(root_path, audios, aid_set, audios_lst, subset, keep_symb
                 else:
                     print(f"{str(text_path)}的第{row + 1}行未标注音频时段")
                     continue
+
+                # 去除音译内容
+                text = COMMENTED_PATTERN1.sub(r'\1', text)
+                text = COMMENTED_PATTERN2.sub(r'\1', text)
 
                 # 去除符号
                 if not keep_symbol:
@@ -179,6 +186,10 @@ def deal_with_read_text(text_path, keep_symbol=False):
             else:
                 print(f"{str(text_path)}的第{row + 1}行未标注音频时段")
                 continue
+
+            # 去除音译内容
+            text = COMMENTED_PATTERN1.sub(r'\1', text)
+            text = COMMENTED_PATTERN2.sub(r'\1', text)
 
             # 去除符号
             if not keep_symbol:
